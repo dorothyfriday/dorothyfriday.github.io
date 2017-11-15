@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+    body{ background:#fefefe;  color:#AAA;  }
+    a:link,a:visited{ text-decoration:none; color:#666; border-bottom:1px #999 dashed; }
+    a:hover,a:active{ color:#FF00FF; border-bottom:1px #FF00FF solid; }
+    h1,h2,h3,h4,h5,h6{ color:#999; font-weight:bolder; padding:10px 15px 0px 15px; }
+    h1{ font-size:36px; }
+    h2{ font-size:24px; }
+    h3{ font-size:18px; }
+    h4{ font-size:16px; }
+    h5{ font-size:14px; }
+    h6{ font-size:12px; }
+    p{ font-size:medium; line-height:1.2; }
+    ul,ol{ margin:25px; }
+    ul li, ol li { padding-left:10px; }
+    ul{ list-style:square inside; }
+    ol{ list-style:decimal inside; }
+    blockquote{ margin:15px; border-left:5px #FF00FF solid; padding:7px; color:#999; font-style:italic; }
+    pre { margin:10px; border-left:5px #FF00FF double; padding:10px; font-family:"Courier New", Courier, monospace; }
+
+
+    #calendar {
+        margin: 20px;
+    }
+    .month {
+        margin-right: 8px;
+    }
+    .month-name {
+        font-size: 85%;
+        fill: #777;
+        font-family: Arial, Helvetica;
+    }
+
+    .title {
+        font-size: 100%;
+        fill: #777;
+        font-family: Arial, Helvetica;
+    }
+
+    .test-name {
+        font-size: 85%;
+        fill: #777;
+        font-family: Arial, Helvetica;
+    }
+    .day.hover {
+        stroke: #6d6E70;
+        stroke-width: 2;
+    }
+    .day.focus {
+        stroke: #FF00FF;
+        stroke-width: 2;
+    }
+</style>
+<link rel="stylesheet" media="screen" href="./css/style.css" />
+
+<body>
+
+<h2 class="title" style="text-align:center;"></h2>
+<p class="month-name" style="text-align:center;">
+    The birthdays of some of my favorite comedians.
+<div id="calendar" style="text-align:center;"></div>
+<p class="month-name" style="text-align:center;">
+
+    <br>
+    <i>This is a simplified version of Dan Joseph's Calendar Heat Map block <a href="https://bl.ocks.org/danbjoseph/13d9365450c27ed3bf5a568721296dcc">found here.</a>
+        <br>
+        Dropped: colors and fill interpolation on the d3 filter function.
+        <br>
+        Added: A third column of data that feeds into the appended text.
+        <br>
+</p>
+
+
+<script src="//d3js.org/d3.v4.min.js"></script>
+<script>
+
+    // ripped and edited from Dan Joseph’s Block 13d9365450c27ed3bf5a568721296dcc, https://bl.ocks.org/danbjoseph/13d9365450c27ed3bf5a568721296dcc
+
+    function drawCalendar(dateData){
+
+        var minDate = d3.min(dateData, function(d) { return new Date(d.day) })
+        var maxDate = d3.max(dateData, function(d) { return new Date(d.day) })
+
+        var cellMargin = 2,
+            cellSize = 20;
+
+        var day = d3.timeFormat("%w"),
+            week = d3.timeFormat("%U"),
+            format = d3.timeFormat("%Y-%m-%d"),
+            titleFormat = d3.utcFormat("%d-%b");
+        monthName = d3.timeFormat("%B"),
+            months= d3.timeMonth.range(d3.timeMonth.floor(minDate), maxDate);
+
+        d3.select("h2").append("p").text("February babies are funny.");
+
+        var svg = d3.select("#calendar").selectAll("svg")
+            .data(months)
+            .enter().append("svg")
+            .attr("class", "month")
+            .attr("height", ((cellSize * 7) + (cellMargin * 8) + 20) ) // the 20 is for the month labels
+            .attr("width", function(d) {
+                var columns = 5;
+                return ((cellSize * columns) + (cellMargin * (columns + 1)));
+            })
+            .append("g")
+
+        svg.append("text")
+            .attr("class", "month-name")
+            .attr("y", (cellSize * 7) + (cellMargin * 8) + 15 )
+            .attr("x", function(d) {
+                var columns = 5;
+                return (((cellSize * columns) + (cellMargin * (columns + 1))) / 2);
+            })
+            .attr("text-anchor", "middle")
+            .text(function(d) { return monthName(d); })
+
+        var rect = svg.selectAll("rect.day")
+            .data(function(d, i) { return d3.timeDays(d, new Date(d.getFullYear(), d.getMonth()+1, 1)); })
+            .enter().append("rect")
+            .attr("class", "day")
+            .attr("width", cellSize)
+            .attr("height", cellSize)
+            .attr("rx", 3).attr("ry", 3) // rounded corners
+            .attr("fill", '#eaeaea') // default light grey fill
+            .attr("y", function(d) { return (day(d) * cellSize) + (day(d) * cellMargin) + cellMargin; })
+            .attr("x", function(d) { return ((week(d) - week(new Date(d.getFullYear(),d.getMonth(),1))) * cellSize) + ((week(d) - week(new Date(d.getFullYear(),d.getMonth(),1))) * cellMargin) + cellMargin ; })
+            .on("mouseover", function(d) {
+                d3.select(this).classed('hover', true);
+            })
+            .on("mouseout", function(d) {
+                d3.select(this).classed('hover', false);
+            })
+            .datum(format);
+
+        rect.append("title")
+            .text(function(d) { return titleFormat(new Date(d)); });
+
+
+        //making the data more digestible as key/leaf pairs.
+        var lookup = d3.nest()
+            .key(function(d) { return d.day; })
+            .object(dateData);
+
+        console.log(lookup)
+
+        //this just says, if data is seen in lookup, change fill. Then, select the appended text and change that, too.
+        rect.filter(function(d) { return d in lookup; })
+            .style("fill", '#FF00FF')
+            .select("title")
+            .text(function(d) { return titleFormat(new Date(d)) + ": " + lookup[d][0]["surname"]; });
+
+    }
+
+    d3.csv("dates.csv", function(response){
+        drawCalendar(response);
+    })
+
+
+</script>
+
